@@ -16,14 +16,12 @@
         2: '#000000'
     }
 
-    const P = .02;
-    const F = .00001;
-    const CYCLE_RATE = 300;
+    const CYCLE_DELAY = 100;
 
     document.addEventListener("DOMContentLoaded", function(event) {
         // const canvasWidth = window.outerWidth;
         // const canvasHeight = window.outerHeight;
-        const canvasWidth = 800;
+        const canvasWidth = 700;
         const canvasHeight = 500;
 
         const canvas = document.createElement('canvas');
@@ -33,96 +31,21 @@
 
         const ctx = canvas.getContext('2d');
 
-        const forest = populateForest(canvasWidth, canvasHeight);
-        const temp = populateForest(canvasWidth, canvasHeight);
+        let forest = populateForest(canvasWidth, canvasHeight);
+        let temp = populateForest(canvasWidth, canvasHeight);
 
-        setInterval(() => {
+        const updateWorker = new Worker('updateWorker.js');
+
+        updateWorker.postMessage([forest, temp]);
+        updateWorker.onmessage = ev => {
+            forest = ev.data[0];
+            temp = ev.data[1];
             drawCanvas(forest, ctx);
-            performCycle(forest, temp);
-        }, CYCLE_RATE);
+            setTimeout(() => {
+                updateWorker.postMessage([forest, temp]);
+            }, CYCLE_DELAY);
+        };
     });
-
-
-    function performCycle(forest, temp) {
-        const xlen = forest.length;
-        const ylen = forest[0].length;
-        for (let i = 0; i < xlen; i++) {
-            for (let j = 0; j < ylen; j++) {
-                const state = forest[i][j];
-                let newState = state;
-                switch (state) {
-                    case STATES.TREE:
-                        let W, NW, N, NE, E, SE, S, SW;
-                        if (i !== 0) {
-                            W = forest[i-1][j];
-                            if (j !== 0) {
-                                NW = forest[i-1][j-1];
-                            }
-                            if (j !== ylen-1) {
-                                SW = forest[i-1][j+1];
-                            }
-                        }
-                        if (i !== xlen-1) {
-                            E = forest[i+1][j];
-                            if (j !== 0) {
-                                NE = forest[i+1][j-1];
-                            }
-                            if (j !== ylen-1) {
-                                SE = forest[i+1][j+1];
-                            }
-                        }
-                        if (j !== ylen-1) {
-                            S = forest[i][j+1];
-                        }
-                        if (j !== 0) {
-                            N = forest[i][j-1];
-                        }
-                        if (E === STATES.BURNING ||
-                            NE === STATES.BURNING ||
-                            SE === STATES.BURNING ||
-                            W === STATES.BURNING ||
-                            NW === STATES.BURNING ||
-                            SW === STATES.BURNING ||
-                            S === STATES.BURNING ||
-                            N === STATES.BURNING) {
-                                newState = STATES.BURNING;
-                        } else if (lightning()) {
-                            newState = STATES.BURNING;
-                        }
-                        break;
-                    case STATES.BURNING:
-                        newState = STATES.EMPTY;
-                        break;
-                    case STATES.EMPTY:
-                        if (regenerate()) {
-                            newState = STATES.TREE
-                        }
-                        break;
-                }
-                temp[i][j] = newState;
-            }
-        }
-        return copyTo(temp, forest);
-    }
-
-    function lightning() {
-        return Math.random() < F;
-    }
-
-    function regenerate() {
-        return Math.random() < P;
-    }
-
-    function copyTo(from, to) {
-        const xlen = from.length;
-        const ylen = from[0].length;
-        for (let i = 0; i < xlen; i++) {
-            for (let j = 0; j < ylen; j++) {
-                to[i][j] = from[i][j];
-            }
-        }
-        return to;
-    }
 
     function drawCanvas(updated, ctx) {
         for (let i = 0; i < updated.length; i++) {
@@ -138,7 +61,7 @@
         for (let i = 0; i < width; i++) {
             const col = [];
             for (let j = 0; j < height; j++) {
-                col.push(STATES.TREE);
+                col.push(STATES.BURNING);
             }
             forest.push(col);
         }
