@@ -19,11 +19,16 @@
     const P = .02;
     const F = .00001;
 
+    const SQUARE_SIZE = 3;
+
     document.addEventListener("DOMContentLoaded", function(event) {
         // const canvasWidth = window.outerWidth;
         // const canvasHeight = window.outerHeight;
         const canvasWidth = 800;
         const canvasHeight = 500;
+
+        const forestWidth = Math.floor(canvasWidth / SQUARE_SIZE);
+        const forestHeight = Math.floor(canvasHeight / SQUARE_SIZE);
 
         const canvas = document.createElement('canvas');
         canvas.width = canvasWidth;
@@ -32,11 +37,11 @@
 
         const ctx = canvas.getContext('2d');
 
-        const forest = populateForest(canvasWidth, canvasHeight);
-        const temp = populateForest(canvasWidth, canvasHeight);
+        const forest = populateForest(forestWidth, forestHeight);
+        const temp = populateForest(forestWidth, forestHeight);
 
         function step () {
-            drawCanvas(forest, ctx);
+            drawCanvas(forest, SQUARE_SIZE, ctx);
             performCycle(forest, temp);
             window.requestAnimationFrame(step);
         }
@@ -126,11 +131,11 @@
         return to;
     }
 
-    function drawCanvas(updated, ctx) {
+    function drawCanvas(updated, squareSize, ctx) {
         for (let i = 0; i < updated.length; i++) {
             for (let j = 0; j < updated[0].length; j++) {
                 ctx.fillStyle = getColor(updated[i][j]);
-                ctx.fillRect(i,j,1,1);
+                ctx.fillRect(i*squareSize,j*squareSize,squareSize,squareSize);
             }
         }
     }
