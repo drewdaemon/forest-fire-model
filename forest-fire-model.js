@@ -18,7 +18,6 @@
 
     const P = .02;
     const F = .00001;
-    const CYCLE_RATE = 300;
 
     document.addEventListener("DOMContentLoaded", function(event) {
         // const canvasWidth = window.outerWidth;
@@ -36,10 +35,13 @@
         const forest = populateForest(canvasWidth, canvasHeight);
         const temp = populateForest(canvasWidth, canvasHeight);
 
-        setInterval(() => {
+        function step () {
             drawCanvas(forest, ctx);
             performCycle(forest, temp);
-        }, CYCLE_RATE);
+            window.requestAnimationFrame(step);
+        }
+
+        window.requestAnimationFrame(step);
     });
 
 
