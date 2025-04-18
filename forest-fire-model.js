@@ -16,17 +16,26 @@
     2: "#000000",
   };
 
+  const COLORS_IMAGE_DATA = {
+    0: [46, 145, 58, 255],
+    1: [255, 43, 35, 255],
+    2: [0, 0, 0, 255],
+  };
+
   // Regeneration factor
   window.P = 0.02;
   // Probability of a lightening strike
   window.F = 1e-4;
   // Size of each square in pixels
-  window.SQUARE_SIZE = 3;
+  window.SQUARE_SIZE = 1;
 
   document.addEventListener("DOMContentLoaded", function (event) {
     const canvas = buildElements();
 
-    const ctx = canvas.getContext("2d");
+    const ctx = canvas.getContext("2d", {
+      alpha: false,
+      willReadFrequently: true,
+    });
 
     const { width, height } = canvas.getBoundingClientRect();
 
@@ -40,7 +49,13 @@
     const temp = populateForest(forestWidth, forestHeight);
 
     function step() {
-      drawCanvas(forest, SQUARE_SIZE, ctx);
+      drawCanvasUsingImageData(
+        forest,
+        SQUARE_SIZE,
+        canvas.width,
+        canvas.height,
+        ctx
+      );
       performCycle(forest, temp);
       window.requestAnimationFrame(step);
     }
@@ -184,14 +199,37 @@
     }
   }
 
+  function drawCanvasUsingImageData(
+    updated,
+    squareSize,
+    canvasWidth,
+    canvasHeight,
+    ctx
+  ) {
+    const imageData = ctx.getImageData(0, 0, canvasWidth, canvasHeight);
+    const data = imageData.data;
+
+    for (let row = 0; row < updated.length; row++) {
+      for (let col = 0; col < updated[0].length; col++) {
+        const pixelStart = (row * imageData.width + col) * 4;
+        const color = COLORS_IMAGE_DATA[updated[row][col]];
+        for (let i = 0; i < color.length; i++) {
+          data[pixelStart + i] = color[i];
+        }
+      }
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+  }
+
   function populateForest(width, height) {
     const forest = [];
-    for (let i = 0; i < width; i++) {
-      const col = [];
-      for (let j = 0; j < height; j++) {
-        col.push(STATES.TREE);
+    for (let row = 0; row < height; row++) {
+      const row = [];
+      for (let col = 0; col < width; col++) {
+        row.push(STATES.TREE);
       }
-      forest.push(col);
+      forest.push(row);
     }
     return forest;
   }
