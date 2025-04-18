@@ -1,4 +1,5 @@
 <html>
+
 <head>
     <title>Self-Organized Critical Forest-Fire Model</title>
     <style>
@@ -6,25 +7,42 @@
             margin: 0;
             padding: 0;
         }
+
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
         .container {
             display: block;
             margin: 0 auto;
             width: 800px;
             text-align: center;
         }
+
         canvas {
-            display: block;
-            margin: 40px auto;
+            flex: 1;
+            width: 100%;
+        }
+
+        .controls {
+            height: 50px;
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>Self-Organized Critical Forest-Fire Model</h1>
         <h2>
-            As Proposed in B. Drossel and F. Schwabl's <a href="https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.69.1629" target="_blank">1992 Paper</a>
+            As Proposed in B. Drossel and F. Schwabl's <a
+                href="https://journals.aps.org/prl/abstract/10.1103/PhysRevLett.69.1629" target="_blank">1992 Paper</a>
         </h2>
-        <script src="./forest-fire-model.js"></script>
+        <div class="controls"></div>
     </div>
+    <canvas></canvas>
+    <script src="./forest-fire-model.js"></script>
 </body>
+
 </html>
