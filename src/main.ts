@@ -1,4 +1,8 @@
-import { drawCanvas, drawCanvasUsingImageData } from "./rendering";
+import {
+  drawCanvas,
+  drawCanvasUsingImageData,
+  drawCanvasUsingTexture,
+} from "./rendering";
 import { buildForest, performCycle } from "./simulation";
 import "./style.css";
 
@@ -6,6 +10,22 @@ import "./style.css";
 const SQUARE_SIZE = 1;
 
 let STRATEGY = "image-data";
+
+function glExperiments() {
+  const { canvas, fpsContainer } = setupElements();
+
+  const gl = canvas.getContext("webgl2", {
+    alpha: false,
+    willReadFrequently: true,
+  })!;
+
+  const { width, height } = canvas.getBoundingClientRect();
+
+  canvas.width = width;
+  canvas.height = height;
+
+  drawCanvasUsingTexture(undefined, gl);
+}
 
 function main() {
   const { canvas, fpsContainer } = setupElements();
@@ -59,7 +79,8 @@ function main() {
   window.requestAnimationFrame(step);
 }
 
-document.addEventListener("DOMContentLoaded", main);
+// document.addEventListener("DOMContentLoaded", main);
+document.addEventListener("DOMContentLoaded", glExperiments);
 
 function setupElements() {
   const controlsContainer = document.querySelector(".controls")!;

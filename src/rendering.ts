@@ -56,16 +56,17 @@ export function drawCanvasUsingTexture(
 
   // prettier-ignore
   const positions = new Float32Array([
-    -1, 1, // top left
-    1, -1, // bottom right
-    -1, -1, // bottom left
-    1, 1, // top right
+  // position,  texcoord
+    -1,  1,       0, 0,   // top left
+    1,  1,       1, 0,   // top right
+    -1, -1,       0, 1,   // bottom left
+    1, -1,       1, 1    // bottom right
   ]);
 
   // prettier-ignore
   const indices = new Uint8Array([
-    0, 1, 3, // first triangle
-    1, 2, 0, // second triangle
+    0, 2, 1, // first triangle (top left, bottom left, top right)
+    1, 2, 3  // second triangle (top right, bottom left, bottom right)
   ]);
 
   const positionBuffer = gl.createBuffer();
@@ -75,19 +76,45 @@ export function drawCanvasUsingTexture(
   const vertexArray = gl.createVertexArray();
   gl.bindVertexArray(vertexArray);
 
+  const stride = Float32Array.BYTES_PER_ELEMENT * 4;
+
+  gl.vertexAttribPointer(0, 2, gl.FLOAT, false, stride, 0);
+  gl.enableVertexAttribArray(0);
+
   gl.vertexAttribPointer(
-    0,
+    1,
     2,
     gl.FLOAT,
     false,
-    Float32Array.BYTES_PER_ELEMENT * 2,
-    0
+    stride,
+    Float32Array.BYTES_PER_ELEMENT * 2
   );
   gl.enableVertexAttribArray(0);
 
   const elementArrayBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementArrayBuffer);
   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+  const numTexels = gl.canvas.width * gl.canvas.height;
+
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.LUMINANCE,
+    gl.canvas.width,
+    gl.canvas.height,
+    0,
+    gl.LUMINANCE,
+    gl.UNSIGNED_BYTE,
+    new Uint8Array(numTexels).fill(0)
+  );
 
   gl.useProgram(program);
   gl.bindVertexArray(vertexArray);
@@ -104,26 +131,26 @@ function buildProgram(gl: WebGL2RenderingContext) {
 
   const vertexShaderSource = `#version 300 es
     layout (location = 0) in vec2 a_position;
-    // layout (location = 1) a_texcoord;
+    layout (location = 1) in vec2 a_texcoord;
     
-    // out vec2 v_texcoord;
+    out vec2 v_texcoord;
 
     void main() {
       gl_Position = vec4(a_position, 0.0, 1.0);
-      // v_texcoord = a_texcoord;  
+      v_texcoord = a_texcoord;  
     }`;
 
   const fragmentShaderSource = `#version 300 es
     precision mediump float;
-    // in vec2 v_texcoord;
+    in vec2 v_texcoord;
 
     out vec4 outColor;
 
-    // uniform sampler2D u_texture;
+    uniform sampler2D u_texture;
 
     void main() {
-      // vec4 color = texture(u_texture, v_texcoord);
-      outColor = vec4(1.0, 0.0, 0.0, 1.0);
+      vec4 color = texture(u_texture, v_texcoord);
+      outColor = color;
     }`;
 
   gl.shaderSource(vertShader, vertexShaderSource);
