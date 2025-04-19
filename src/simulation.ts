@@ -11,51 +11,25 @@ const P = 0.02;
 const F = 1e-5;
 
 export function performCycle(forest: STATE[][], temp: STATE[][]) {
-  const xlen = forest.length;
-  const ylen = forest[0].length;
-  for (let i = 0; i < xlen; i++) {
-    for (let j = 0; j < ylen; j++) {
-      const state = forest[i][j];
+  const ylen = forest.length;
+  const xlen = forest[0].length;
+  for (let row = 0; row < ylen; row++) {
+    for (let col = 0; col < xlen; col++) {
+      const state = forest[row][col];
       let newState = state;
       switch (state) {
         case STATE.TREE:
-          let W, NW, N, NE, E, SE, S, SW;
-          if (i !== 0) {
-            W = forest[i - 1][j];
-            if (j !== 0) {
-              NW = forest[i - 1][j - 1];
-            }
-            if (j !== ylen - 1) {
-              SW = forest[i - 1][j + 1];
-            }
-          }
-          if (i !== xlen - 1) {
-            E = forest[i + 1][j];
-            if (j !== 0) {
-              NE = forest[i + 1][j - 1];
-            }
-            if (j !== ylen - 1) {
-              SE = forest[i + 1][j + 1];
-            }
-          }
-          if (j !== ylen - 1) {
-            S = forest[i][j + 1];
-          }
-          if (j !== 0) {
-            N = forest[i][j - 1];
-          }
           if (
-            E === STATE.BURNING ||
-            NE === STATE.BURNING ||
-            SE === STATE.BURNING ||
-            W === STATE.BURNING ||
-            NW === STATE.BURNING ||
-            SW === STATE.BURNING ||
-            S === STATE.BURNING ||
-            N === STATE.BURNING
+            forest[row - 1]?.[col - 1] === STATE.BURNING ||
+            forest[row - 1]?.[col] === STATE.BURNING ||
+            forest[row - 1]?.[col + 1] === STATE.BURNING ||
+            forest[row][col + 1] === STATE.BURNING ||
+            forest[row + 1]?.[col + 1] === STATE.BURNING ||
+            forest[row + 1]?.[col] === STATE.BURNING ||
+            forest[row + 1]?.[col - 1] === STATE.BURNING ||
+            forest[row][col - 1] === STATE.BURNING ||
+            lightning()
           ) {
-            newState = STATE.BURNING;
-          } else if (lightning()) {
             newState = STATE.BURNING;
           }
           break;
@@ -68,7 +42,7 @@ export function performCycle(forest: STATE[][], temp: STATE[][]) {
           }
           break;
       }
-      temp[i][j] = newState;
+      temp[row][col] = newState;
     }
   }
   return copyTo(temp, forest);
@@ -83,11 +57,11 @@ function regenerate() {
 }
 
 function copyTo(from: any[][], to: any[][]) {
-  const xlen = from.length;
-  const ylen = from[0].length;
-  for (let i = 0; i < xlen; i++) {
-    for (let j = 0; j < ylen; j++) {
-      to[i][j] = from[i][j];
+  const ylen = from.length;
+  const xlen = from[0].length;
+  for (let row = 0; row < ylen; row++) {
+    for (let col = 0; col < xlen; col++) {
+      to[row][col] = from[row][col];
     }
   }
   return to;
