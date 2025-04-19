@@ -1,0 +1,26 @@
+* {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.container {
+  display: block;
+  margin: 0 auto;
+  width: 800px;
+  text-align: center;
+}
+
+canvas {
+  flex: 1;
+  width: 100%;
+}
+
+.controls {
+  height: 20px;
+}
