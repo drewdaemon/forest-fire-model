@@ -23,14 +23,16 @@
   };
 
   // Regeneration factor
-  window.P = 0.02;
+  const P = 0.02;
   // Probability of a lightening strike
-  window.F = 1e-4;
+  const F = 1e-5;
   // Size of each square in pixels
-  window.SQUARE_SIZE = 1;
+  const SQUARE_SIZE = 1;
+
+  let STRATEGY = "image-data";
 
   document.addEventListener("DOMContentLoaded", function (event) {
-    const canvas = buildElements();
+    const { canvas, fpsContainer } = buildElements();
 
     const ctx = canvas.getContext("2d", {
       alpha: false,
@@ -48,14 +50,32 @@
     const forest = populateForest(forestWidth, forestHeight);
     const temp = populateForest(forestWidth, forestHeight);
 
+    let frameCount = 0;
+    let fps = 0;
+    let fpsLastUpdate = performance.now();
     function step() {
-      drawCanvasUsingImageData(
-        forest,
-        SQUARE_SIZE,
-        canvas.width,
-        canvas.height,
-        ctx
-      );
+      const now = performance.now();
+
+      // Update frame count and calculate FPS every second
+      frameCount++;
+      if (now - fpsLastUpdate >= 1000) {
+        fps = frameCount;
+        frameCount = 0;
+        fpsLastUpdate = now;
+        fpsContainer.innerText = `Frame rate: ${fps}/sec`;
+      }
+
+      if (STRATEGY === "image-data") {
+        drawCanvasUsingImageData(
+          forest,
+          SQUARE_SIZE,
+          canvas.width,
+          canvas.height,
+          ctx
+        );
+      } else {
+        drawCanvas(forest, SQUARE_SIZE, ctx);
+      }
       performCycle(forest, temp);
       window.requestAnimationFrame(step);
     }
@@ -67,44 +87,31 @@
     const canvas = document.querySelector("canvas");
     document.body.appendChild(canvas);
 
-    // Add slider to control F
-    const sliderF = document.createElement("input");
-    sliderF.type = "range";
-    sliderF.min = Math.log10(1e-10);
-    sliderF.max = Math.log10(1);
-    sliderF.value = Math.log10(F);
-    sliderF.step = 0.1;
-
-    const sliderFLabel = document.createElement("label");
-    sliderFLabel.innerText = `F: ${F.toExponential(2)}`;
-
-    sliderF.addEventListener("input", function () {
-      F = Math.pow(10, sliderF.value);
-      sliderFLabel.innerText = `F: ${F.toExponential(2)}`;
-    });
-
-    // Add slider to control P
-    const sliderP = document.createElement("input");
-    sliderP.type = "range";
-    sliderP.min = 0.01; // Minimum value for P
-    sliderP.max = 0.05; // Maximum value for P
-    sliderP.value = P;
-    sliderP.step = 0.01;
-
-    sliderP.addEventListener("input", function () {
-      P = Math.pow(10, sliderP.value);
-      sliderPLabel.innerText = `P: ${P.toExponential(2)}`;
-    });
-
-    const sliderPLabel = document.createElement("label");
-    sliderPLabel.innerText = `P: ${P.toFixed(5)}`;
-
     const controlsContainer = document.querySelector(".controls");
-    controlsContainer.appendChild(sliderP);
-    controlsContainer.appendChild(sliderPLabel);
-    controlsContainer.appendChild(sliderF);
-    controlsContainer.appendChild(sliderFLabel);
-    return canvas;
+
+    // Create dropdown menu
+    const dropdown = document.createElement("select");
+    dropdown.id = "strategy";
+    const options = [
+      { value: "draw-calls", text: "Calls to fillRect" },
+      { value: "image-data", text: "ImageData API" },
+    ];
+    options.forEach((option) => {
+      const opt = document.createElement("option");
+      opt.value = option.value;
+      opt.textContent = option.text;
+      dropdown.appendChild(opt);
+    });
+
+    dropdown.value = STRATEGY;
+
+    dropdown.addEventListener("input", (ev) => {
+      STRATEGY = ev.target.value;
+    });
+
+    controlsContainer.appendChild(dropdown);
+
+    return { canvas, fpsContainer: document.querySelector(".frame-rate") };
   }
 
   function performCycle(forest, temp) {
@@ -191,10 +198,15 @@
   }
 
   function drawCanvas(updated, squareSize, ctx) {
-    for (let i = 0; i < updated.length; i++) {
-      for (let j = 0; j < updated[0].length; j++) {
-        ctx.fillStyle = getColor(updated[i][j]);
-        ctx.fillRect(i * squareSize, j * squareSize, squareSize, squareSize);
+    for (let row = 0; row < updated.length; row++) {
+      for (let col = 0; col < updated[0].length; col++) {
+        ctx.fillStyle = getColor(updated[row][col]);
+        ctx.fillRect(
+          col * squareSize,
+          row * squareSize,
+          squareSize,
+          squareSize
+        );
       }
     }
   }
