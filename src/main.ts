@@ -1,55 +1,31 @@
-import {
-  drawCanvas,
-  drawCanvasUsingImageData,
-  drawCanvasUsingTexture,
-} from "./rendering";
-import { buildForest, performCycle } from "./simulation";
+import { strategies } from "./strategies";
 import "./style.css";
+import { Strategy } from "./types";
 
-// Size of each square in pixels
-const SQUARE_SIZE = 1;
-
-let STRATEGY = "image-data";
-
-function glExperiments() {
-  const { canvas, fpsContainer } = setupElements();
-
-  const gl = canvas.getContext("webgl2", {
-    alpha: false,
-    willReadFrequently: true,
-  })!;
-
-  const { width, height } = canvas.getBoundingClientRect();
-
-  canvas.width = width;
-  canvas.height = height;
-
-  drawCanvasUsingTexture(undefined, gl);
-}
+let strategy: Strategy | undefined;
 
 function main() {
-  const { canvas, fpsContainer } = setupElements();
-
-  const ctx = canvas.getContext("2d", {
-    alpha: false,
-    willReadFrequently: true,
-  })!;
+  const { canvas, dropdown, fpsContainer } = setupElements();
 
   const { width, height } = canvas.getBoundingClientRect();
 
   canvas.width = width;
   canvas.height = height;
 
-  const forestWidth = Math.floor(canvas.width / SQUARE_SIZE);
-  const forestHeight = Math.floor(canvas.height / SQUARE_SIZE);
+  dropdown.addEventListener("input", (ev) => {
+    const newStrategy = (ev.target as HTMLSelectElement).value;
+    switchStrategy(newStrategy, canvas);
+  });
 
-  const forest = buildForest(forestWidth, forestHeight);
-  const temp = buildForest(forestWidth, forestHeight);
+  const initialStrategyId = "image_data";
+  dropdown.value = initialStrategyId;
+
+  switchStrategy(initialStrategyId, canvas);
 
   let frameCount = 0;
   let fps = 0;
   let fpsLastUpdate = performance.now();
-  function step() {
+  function frame() {
     const now = performance.now();
 
     // Update frame count and calculate FPS every second
@@ -61,26 +37,23 @@ function main() {
       fpsContainer.innerText = `Frame rate: ${fps}/sec`;
     }
 
-    if (STRATEGY === "image-data") {
-      drawCanvasUsingImageData(
-        forest,
-        SQUARE_SIZE,
-        canvas.width,
-        canvas.height,
-        ctx
-      );
-    } else {
-      drawCanvas(forest, SQUARE_SIZE, ctx);
-    }
-    performCycle(forest, temp);
-    window.requestAnimationFrame(step);
+    window.requestAnimationFrame(frame);
   }
 
-  window.requestAnimationFrame(step);
+  window.requestAnimationFrame(frame);
 }
 
-// document.addEventListener("DOMContentLoaded", main);
-document.addEventListener("DOMContentLoaded", glExperiments);
+document.addEventListener("DOMContentLoaded", main);
+
+const switchStrategy = (newStrategy: string, canvas: HTMLCanvasElement) => {
+  const StrategyClass = strategies.get(newStrategy);
+  if (!StrategyClass) {
+    throw new Error(`Strategy not found`);
+  }
+  strategy?.stop();
+  strategy = new StrategyClass({ canvas });
+  strategy.start();
+};
 
 function setupElements() {
   const controlsContainer = document.querySelector(".controls")!;
@@ -88,10 +61,11 @@ function setupElements() {
   // Create dropdown menu
   const dropdown = document.createElement("select");
   dropdown.id = "strategy";
-  const options = [
-    { value: "draw-calls", text: "Calls to fillRect" },
-    { value: "image-data", text: "ImageData API" },
-  ];
+  const options = Array.from(strategies.values()).map((strategy) => ({
+    value: strategy.id,
+    text: strategy.option,
+  }));
+
   options.forEach((option) => {
     const opt = document.createElement("option");
     opt.value = option.value;
@@ -99,16 +73,11 @@ function setupElements() {
     dropdown.appendChild(opt);
   });
 
-  dropdown.value = STRATEGY;
-
-  dropdown.addEventListener("input", (ev) => {
-    STRATEGY = (ev.target as HTMLSelectElement).value;
-  });
-
   controlsContainer.appendChild(dropdown);
 
   return {
     canvas: document.querySelector("canvas")!,
+    dropdown,
     fpsContainer: document.querySelector(".frame-rate") as HTMLParagraphElement,
   };
 }
