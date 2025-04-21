@@ -1,18 +1,84 @@
-import { STATE } from "./states";
+import { Strategy } from "../types";
 
-export function drawCanvasUsingTexture(
-  updated: STATE[][],
-  gl: WebGL2RenderingContext
-) {
+export class WebGLWithCPUSimulationStrategy extends Strategy {
+  static id = "webgl_with_cpu_simulation";
+  static option = "WebGL with CPU simulation";
+  static description =
+    "Uses WebGL texture to paint but still runs the computation on the CPU.";
+
+  private forest: Uint8Array = new Uint8Array();
+  private temp: Uint8Array = new Uint8Array();
+  private gl: WebGL2RenderingContext;
+  private stopped = true;
+
+  constructor({ canvas }: { canvas: HTMLCanvasElement }) {
+    super({ canvas });
+    const gl = canvas.getContext("webgl2", {
+      alpha: false,
+    });
+
+    if (!gl) {
+      throw new Error("Failed to get WebGL2 context");
+    }
+
+    this.gl = gl;
+    this.forest = new Uint8Array(canvas.width * canvas.height).fill(0.5);
+    this.temp = new Uint8Array(canvas.width * canvas.height);
+  }
+
+  start() {
+    this.stopped = false;
+
+    const result = setup(this.gl);
+
+    const cycle = () => {
+      draw({ ...result, gl: this.gl });
+
+      if (!this.stopped) {
+        window.requestAnimationFrame(() => cycle());
+      }
+    };
+
+    cycle();
+  }
+
+  stop() {
+    // Stop the simulation
+    this.forest = new Uint8Array();
+    this.temp = new Uint8Array();
+    this.stopped = true;
+  }
+}
+
+function draw({
+  gl,
+  program,
+  vertexArray,
+  indices,
+}: {
+  gl: WebGL2RenderingContext;
+  program: WebGLProgram;
+  vertexArray: WebGLVertexArrayObject;
+  indices: Uint8Array;
+}) {
+  gl.useProgram(program);
+  gl.bindVertexArray(vertexArray);
+  gl.clearColor(0, 0, 0, 1);
+  gl.clear(gl.COLOR_BUFFER_BIT);
+  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+  gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_BYTE, 0);
+}
+
+function setup(gl: WebGL2RenderingContext) {
   const program = buildProgram(gl);
 
   // prettier-ignore
   const positions = new Float32Array([
-  // position,  texcoord
+  // position,    texcoord
     -1,  1,       0, 0,   // top left
-    1,  1,       1, 0,   // top right
+    1,  1,        1, 0,   // top right
     -1, -1,       0, 1,   // bottom left
-    1, -1,       1, 1    // bottom right
+    1, -1,        1, 1    // bottom right
   ]);
 
   // prettier-ignore
@@ -59,21 +125,26 @@ export function drawCanvasUsingTexture(
   gl.texImage2D(
     gl.TEXTURE_2D,
     0,
-    gl.LUMINANCE,
+    gl.R8UI,
     gl.canvas.width,
     gl.canvas.height,
     0,
-    gl.LUMINANCE,
+    gl.RED_INTEGER,
     gl.UNSIGNED_BYTE,
     new Uint8Array(numTexels).fill(0)
   );
 
-  gl.useProgram(program);
-  gl.bindVertexArray(vertexArray);
-  gl.clearColor(0, 0, 0, 1);
-  gl.clear(gl.COLOR_BUFFER_BIT);
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-  gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_BYTE, 0);
+  const error = gl.getError();
+  if (error !== gl.NO_ERROR) {
+    console.error("WebGL Error:", error);
+  }
+
+  return {
+    texture: tex,
+    program,
+    vertexArray,
+    indices,
+  };
 }
 
 function buildProgram(gl: WebGL2RenderingContext) {
@@ -94,15 +165,23 @@ function buildProgram(gl: WebGL2RenderingContext) {
 
   const fragmentShaderSource = `#version 300 es
     precision mediump float;
+    precision mediump usampler2D;
+
     in vec2 v_texcoord;
 
     out vec4 outColor;
 
-    uniform sampler2D u_texture;
+    uniform usampler2D u_texture;
 
     void main() {
-      vec4 color = texture(u_texture, v_texcoord);
-      outColor = color;
+     uint texValue = texture(u_texture, v_texcoord).r;
+     if (texValue == 0u) {
+       outColor = vec4(0.0, 0.0, 0.0, 1.0);
+     } else if (texValue == 1u) {
+       outColor = vec4(1.0, 0.0, 0.0, 1.0);
+     } else if (texValue == 2u) {
+        outColor = vec4(0.0, 1.0, 0.0, 1.0);
+  }
     }`;
 
   gl.shaderSource(vertShader, vertexShaderSource);

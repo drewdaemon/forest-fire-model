@@ -44,8 +44,6 @@ export class DrawRectStrategy extends Strategy {
   }
   stop() {
     // Stop the simulation
-    this.forest = [];
-    this.temp = [];
     this.stopped = true;
   }
 }

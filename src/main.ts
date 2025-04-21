@@ -3,24 +3,20 @@ import "./style.css";
 import { Strategy } from "./types";
 
 let strategy: Strategy | undefined;
+let canvas: HTMLCanvasElement | undefined;
 
 function main() {
   const { canvas, dropdown, fpsContainer } = setupElements();
 
-  const { width, height } = canvas.getBoundingClientRect();
-
-  canvas.width = width;
-  canvas.height = height;
-
   dropdown.addEventListener("input", (ev) => {
     const newStrategy = (ev.target as HTMLSelectElement).value;
-    switchStrategy(newStrategy, canvas);
+    switchStrategy(newStrategy);
   });
 
   const initialStrategyId = "image_data";
   dropdown.value = initialStrategyId;
 
-  switchStrategy(initialStrategyId, canvas);
+  switchStrategy(initialStrategyId);
 
   let frameCount = 0;
   let fps = 0;
@@ -45,12 +41,14 @@ function main() {
 
 document.addEventListener("DOMContentLoaded", main);
 
-const switchStrategy = (newStrategy: string, canvas: HTMLCanvasElement) => {
+const switchStrategy = (newStrategy: string) => {
   const StrategyClass = strategies.get(newStrategy);
   if (!StrategyClass) {
     throw new Error(`Strategy not found`);
   }
   strategy?.stop();
+  canvas?.remove();
+  canvas = addCanvas();
   strategy = new StrategyClass({ canvas });
   strategy.start();
 };
@@ -81,3 +79,14 @@ function setupElements() {
     fpsContainer: document.querySelector(".frame-rate") as HTMLParagraphElement,
   };
 }
+
+const addCanvas = () => {
+  const canvas = document.createElement("canvas");
+  document.body.appendChild(canvas);
+  const { width, height } = canvas.getBoundingClientRect();
+
+  canvas.width = width;
+  canvas.height = height;
+
+  return canvas;
+};
