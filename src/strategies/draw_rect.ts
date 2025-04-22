@@ -1,5 +1,4 @@
 import { buildForest, performCycle } from "../simulation";
-import { STATE } from "../states";
 import { Strategy } from "../types";
 
 export class DrawRectStrategy extends Strategy {
@@ -8,8 +7,8 @@ export class DrawRectStrategy extends Strategy {
   static description =
     "Uses the fillRect method to draw rectangles on the canvas.";
 
-  private forest: STATE[][];
-  private temp: STATE[][];
+  private forest: number[][];
+  private temp: number[][];
   private ctx: CanvasRenderingContext2D;
   private stopped = true;
 
@@ -17,7 +16,6 @@ export class DrawRectStrategy extends Strategy {
     super({ canvas });
     const ctx = canvas.getContext("2d", {
       alpha: false,
-      willReadFrequently: true,
     });
 
     if (!ctx) {
@@ -48,14 +46,14 @@ export class DrawRectStrategy extends Strategy {
   }
 }
 
-const COLORS = {
+const COLORS: Record<number, string> = {
   0: "#2e913a",
   1: "#ff2b23",
   2: "#000000",
 };
 
 function drawCanvas(
-  updated: STATE[][],
+  updated: number[][],
   squareSize: number,
   ctx: CanvasRenderingContext2D
 ) {

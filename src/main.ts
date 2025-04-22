@@ -6,7 +6,7 @@ let strategy: Strategy | undefined;
 let canvas: HTMLCanvasElement | undefined;
 
 function main() {
-  const { canvas, dropdown, fpsContainer } = setupElements();
+  const { dropdown, fpsContainer } = setupElements();
 
   dropdown.addEventListener("input", (ev) => {
     const newStrategy = (ev.target as HTMLSelectElement).value;
@@ -74,7 +74,6 @@ function setupElements() {
   controlsContainer.appendChild(dropdown);
 
   return {
-    canvas: document.querySelector("canvas")!,
     dropdown,
     fpsContainer: document.querySelector(".frame-rate") as HTMLParagraphElement,
   };

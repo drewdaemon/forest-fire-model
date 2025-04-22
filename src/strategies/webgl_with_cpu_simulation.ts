@@ -1,3 +1,4 @@
+import { performIntCycle } from "../simulation";
 import { Strategy } from "../types";
 
 export class WebGLWithCPUSimulationStrategy extends Strategy {
@@ -6,8 +7,8 @@ export class WebGLWithCPUSimulationStrategy extends Strategy {
   static description =
     "Uses WebGL texture to paint but still runs the computation on the CPU.";
 
-  private forest: Uint8Array = new Uint8Array();
-  private temp: Uint8Array = new Uint8Array();
+  private forest: Uint8Array;
+  private temp: Uint8Array;
   private gl: WebGL2RenderingContext;
   private stopped = true;
 
@@ -22,17 +23,20 @@ export class WebGLWithCPUSimulationStrategy extends Strategy {
     }
 
     this.gl = gl;
-    this.forest = new Uint8Array(canvas.width * canvas.height).fill(0.5);
+    this.forest = new Uint8Array(canvas.width * canvas.height).fill(0);
     this.temp = new Uint8Array(canvas.width * canvas.height);
   }
 
   start() {
     this.stopped = false;
 
-    const result = setup(this.gl);
+    const result = setup(this.gl, this.forest);
+
+    this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
 
     const cycle = () => {
-      draw({ ...result, gl: this.gl });
+      performIntCycle(this.forest, this.temp, this.gl.canvas.width);
+      draw({ ...result, gl: this.gl, forest: this.forest });
 
       if (!this.stopped) {
         window.requestAnimationFrame(() => cycle());
@@ -44,8 +48,6 @@ export class WebGLWithCPUSimulationStrategy extends Strategy {
 
   stop() {
     // Stop the simulation
-    this.forest = new Uint8Array();
-    this.temp = new Uint8Array();
     this.stopped = true;
   }
 }
@@ -55,21 +57,33 @@ function draw({
   program,
   vertexArray,
   indices,
+  forest,
 }: {
   gl: WebGL2RenderingContext;
   program: WebGLProgram;
   vertexArray: WebGLVertexArrayObject;
   indices: Uint8Array;
+  forest: Uint8Array;
 }) {
   gl.useProgram(program);
   gl.bindVertexArray(vertexArray);
   gl.clearColor(0, 0, 0, 1);
   gl.clear(gl.COLOR_BUFFER_BIT);
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
   gl.drawElements(gl.TRIANGLES, indices.length, gl.UNSIGNED_BYTE, 0);
+  gl.texSubImage2D(
+    gl.TEXTURE_2D,
+    0,
+    0,
+    0,
+    gl.canvas.width,
+    gl.canvas.height,
+    gl.RED_INTEGER,
+    gl.UNSIGNED_BYTE,
+    forest
+  );
 }
 
-function setup(gl: WebGL2RenderingContext) {
+function setup(gl: WebGL2RenderingContext, forest: Uint8Array) {
   const program = buildProgram(gl);
 
   // prettier-ignore
@@ -107,7 +121,7 @@ function setup(gl: WebGL2RenderingContext) {
     stride,
     Float32Array.BYTES_PER_ELEMENT * 2
   );
-  gl.enableVertexAttribArray(0);
+  gl.enableVertexAttribArray(1);
 
   const elementArrayBuffer = gl.createBuffer();
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, elementArrayBuffer);
@@ -120,8 +134,6 @@ function setup(gl: WebGL2RenderingContext) {
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
-  const numTexels = gl.canvas.width * gl.canvas.height;
-
   gl.texImage2D(
     gl.TEXTURE_2D,
     0,
@@ -131,7 +143,7 @@ function setup(gl: WebGL2RenderingContext) {
     0,
     gl.RED_INTEGER,
     gl.UNSIGNED_BYTE,
-    new Uint8Array(numTexels).fill(0)
+    forest
   );
 
   const error = gl.getError();
@@ -176,12 +188,12 @@ function buildProgram(gl: WebGL2RenderingContext) {
     void main() {
      uint texValue = texture(u_texture, v_texcoord).r;
      if (texValue == 0u) {
-       outColor = vec4(0.0, 0.0, 0.0, 1.0);
+       outColor = vec4(0.0, 1.0, 0.0, 1.0);
      } else if (texValue == 1u) {
        outColor = vec4(1.0, 0.0, 0.0, 1.0);
      } else if (texValue == 2u) {
-        outColor = vec4(0.0, 1.0, 0.0, 1.0);
-  }
+        outColor = vec4(0.0, 0.0, 0.0, 1.0);
+      }
     }`;
 
   gl.shaderSource(vertShader, vertexShaderSource);

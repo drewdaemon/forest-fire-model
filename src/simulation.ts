@@ -10,7 +10,7 @@ const P = 0.02;
 // Probability of a lightening strike
 const F = 1e-5;
 
-export function performCycle(forest: STATE[][], temp: STATE[][]) {
+export function performCycle(forest: number[][], temp: number[][]) {
   const ylen = forest.length;
   const xlen = forest[0].length;
   for (let row = 0; row < ylen; row++) {
@@ -45,7 +45,51 @@ export function performCycle(forest: STATE[][], temp: STATE[][]) {
       temp[row][col] = newState;
     }
   }
-  return copyTo(temp, forest);
+  copyTo(temp, forest);
+}
+
+export function performIntCycle(
+  forest: Uint8Array,
+  temp: Uint8Array,
+  width: number
+) {
+  const ylen = forest.length / width;
+  const xlen = width;
+  for (let row = 0; row < ylen; row++) {
+    for (let col = 0; col < xlen; col++) {
+      const state = forest[row * width + col];
+      let newState = state;
+      switch (state) {
+        case STATE.TREE:
+          if (
+            forest[(row - 1) * width + col - 1] === STATE.BURNING ||
+            forest[(row - 1) * width + col] === STATE.BURNING ||
+            forest[(row - 1) * width + col + 1] === STATE.BURNING ||
+            forest[row * width + col + 1] === STATE.BURNING ||
+            forest[(row + 1) * width + col + 1] === STATE.BURNING ||
+            forest[(row + 1) * width + col] === STATE.BURNING ||
+            forest[(row + 1) * width + col - 1] === STATE.BURNING ||
+            forest[row * width + col - 1] === STATE.BURNING ||
+            lightning()
+          ) {
+            newState = STATE.BURNING;
+          }
+          break;
+        case STATE.BURNING:
+          newState = STATE.EMPTY;
+          break;
+        case STATE.EMPTY:
+          if (regenerate()) {
+            newState = STATE.TREE;
+          }
+          break;
+      }
+      temp[row * width + col] = newState;
+    }
+  }
+  for (let i = 0; i < forest.length; i++) {
+    forest[i] = temp[i];
+  }
 }
 
 function lightning() {

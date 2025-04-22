@@ -1,5 +1,4 @@
 import { buildForest, performCycle } from "../simulation";
-import { STATE } from "../states";
 import { Strategy } from "../types";
 
 export class ImageDataStrategy extends Strategy {
@@ -8,8 +7,8 @@ export class ImageDataStrategy extends Strategy {
   static description =
     "Uses the ImageData API to manipulate the pixels directly.";
 
-  private forest: STATE[][];
-  private temp: STATE[][];
+  private forest: number[][];
+  private temp: number[][];
   private ctx: CanvasRenderingContext2D;
   private stopped = true;
 
@@ -50,14 +49,14 @@ export class ImageDataStrategy extends Strategy {
   }
 }
 
-const COLORS_IMAGE_DATA = {
+const COLORS_IMAGE_DATA: Record<number, number[]> = {
   0: [46, 145, 58, 255],
   1: [255, 43, 35, 255],
   2: [0, 0, 0, 255],
 };
 
 function drawCanvasUsingImageData(
-  updated: STATE[][],
+  updated: number[][],
   ctx: CanvasRenderingContext2D
 ) {
   const imageData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
