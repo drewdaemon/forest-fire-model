@@ -35,6 +35,7 @@ export class WebGlStrategy extends Strategy {
       frameBuffer,
       textureA,
       textureB,
+      randomTexture,
     } = setup(this.gl, this.forest);
 
     let [currentTexture, nextTexture] = [textureA, textureB];
@@ -46,10 +47,35 @@ export class WebGlStrategy extends Strategy {
       // simulation
       this.gl.useProgram(simulationProgram);
 
-      this.gl.uniform1f(
-        this.gl.getUniformLocation(simulationProgram, "u_time"),
-        performance.now() / 1000
-      ); // Pass time in seconds
+      this.gl.activeTexture(this.gl.TEXTURE0);
+      this.gl.bindTexture(this.gl.TEXTURE_2D, currentTexture);
+      this.gl.uniform1i(
+        this.gl.getUniformLocation(simulationProgram, "u_forest"),
+        0
+      );
+
+      this.gl.activeTexture(this.gl.TEXTURE2);
+      this.gl.bindTexture(this.gl.TEXTURE_2D, randomTexture);
+      this.gl.uniform1i(
+        this.gl.getUniformLocation(simulationProgram, "u_random"),
+        1
+      );
+      this.gl.texSubImage2D(
+        this.gl.TEXTURE_2D,
+        0,
+        0,
+        0,
+        this.gl.canvas.width,
+        this.gl.canvas.height,
+        this.gl.RED,
+        this.gl.FLOAT,
+        new Float32Array(
+          Array.from(
+            { length: this.gl.canvas.width * this.gl.canvas.height },
+            () => Math.random()
+          )
+        )
+      );
 
       // set up the next texture to receive the output of the simulation
       this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, frameBuffer);
@@ -158,7 +184,7 @@ function setup(gl: WebGL2RenderingContext, forest: Uint8Array) {
   // because we are using 1-byte textures.
   gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
 
-  function createTexture() {
+  function createSimulationTexture() {
     const tex = gl.createTexture();
     if (!tex) {
       throw new Error("Failed to create texture");
@@ -183,8 +209,43 @@ function setup(gl: WebGL2RenderingContext, forest: Uint8Array) {
     return tex;
   }
 
-  const textureA = createTexture();
-  const textureB = createTexture();
+  const textureA = createSimulationTexture();
+  const textureB = createSimulationTexture();
+
+  function createRandomTexture() {
+    const tex = gl.createTexture();
+    if (!tex) {
+      throw new Error("Failed to create texture");
+    }
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.R32F,
+      gl.canvas.width,
+      gl.canvas.height,
+      0,
+      gl.RED,
+      gl.FLOAT,
+      new Float32Array(
+        Array.from({ length: gl.canvas.width * gl.canvas.height }, () =>
+          Math.random()
+        )
+      )
+    );
+    return tex;
+  }
+
+  const randomTexture = createRandomTexture();
+  gl.useProgram(simulationProgram);
+  gl.activeTexture(gl.TEXTURE1);
+  gl.bindTexture(gl.TEXTURE_2D, randomTexture);
+  gl.uniform1i(gl.getUniformLocation(simulationProgram, "u_random"), 1);
 
   const error = gl.getError();
   if (error !== gl.NO_ERROR) {
@@ -206,6 +267,7 @@ function setup(gl: WebGL2RenderingContext, forest: Uint8Array) {
   return {
     textureA,
     textureB,
+    randomTexture,
     renderingProgram,
     simulationProgram,
     vertexArray,
@@ -223,7 +285,7 @@ function buildSimulationProgram(gl: WebGL2RenderingContext) {
 
     void main() {
       gl_Position = vec4(a_position, 0.0, 1.0);
-      v_texcoord = a_texcoord;
+      v_texcoord = vec2(a_texcoord.x, 1.0 - a_texcoord.y);
     }`;
 
   const fragmentShaderSource = `#version 300 es
@@ -234,13 +296,9 @@ function buildSimulationProgram(gl: WebGL2RenderingContext) {
 
     out uint outState;
 
-    float rand(vec3 co) {
-      return fract(sin(dot(co, vec3(12.9898, 78.233, 45.164))) * 43758.5453);
-    }
-
     uniform usampler2D u_forest;
+    uniform sampler2D u_random;
     uniform vec2 u_resolution;
-    uniform float u_time;
 
     uint getState(vec2 offset) {
       vec2 coord = v_texcoord + offset / u_resolution;
@@ -250,7 +308,7 @@ function buildSimulationProgram(gl: WebGL2RenderingContext) {
     void main() {
       uint state = texture(u_forest, v_texcoord).r;
 
-      float randVal = rand(vec3(v_texcoord * u_resolution, u_time));
+      float randVal = texture(u_random, v_texcoord).r;
 
       if (state == 0u) { 
         if (
@@ -277,8 +335,6 @@ function buildSimulationProgram(gl: WebGL2RenderingContext) {
           outState = 2u; // EMPTY
         }
       }
-
-      // outState = randVal < 0.01 ? 2u : 0u; // 10% chance to be burning
     }`;
 
   return buildProgram(gl, vertexShaderSource, fragmentShaderSource);
