@@ -46,6 +46,11 @@ export class WebGlStrategy extends Strategy {
       // simulation
       this.gl.useProgram(simulationProgram);
 
+      this.gl.uniform1f(
+        this.gl.getUniformLocation(simulationProgram, "u_time"),
+        performance.now() / 1000
+      ); // Pass time in seconds
+
       // set up the next texture to receive the output of the simulation
       this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, frameBuffer);
       this.gl.framebufferTexture2D(
@@ -63,10 +68,6 @@ export class WebGlStrategy extends Strategy {
 
       // set up the simulation
       this.gl.bindTexture(this.gl.TEXTURE_2D, currentTexture);
-      this.gl.uniform1f(
-        this.gl.getUniformLocation(simulationProgram, "u_random"),
-        Math.random()
-      );
       this.gl.uniform2f(
         this.gl.getUniformLocation(simulationProgram, "u_resolution"),
         this.gl.canvas.width,
@@ -233,9 +234,13 @@ function buildSimulationProgram(gl: WebGL2RenderingContext) {
 
     out uint outState;
 
+    float rand(vec3 co) {
+      return fract(sin(dot(co, vec3(12.9898, 78.233, 45.164))) * 43758.5453);
+    }
+
     uniform usampler2D u_forest;
-    uniform float u_random;
     uniform vec2 u_resolution;
+    uniform float u_time;
 
     uint getState(vec2 offset) {
       vec2 coord = v_texcoord + offset / u_resolution;
@@ -245,7 +250,9 @@ function buildSimulationProgram(gl: WebGL2RenderingContext) {
     void main() {
       uint state = texture(u_forest, v_texcoord).r;
 
-      if (state == 0u) { // TREE
+      float randVal = rand(vec3(v_texcoord * u_resolution, u_time));
+
+      if (state == 0u) { 
         if (
           getState(vec2(-1.0, -1.0)) == 1u ||
           getState(vec2( 0.0, -1.0)) == 1u ||
@@ -255,7 +262,7 @@ function buildSimulationProgram(gl: WebGL2RenderingContext) {
           getState(vec2(-1.0,  1.0)) == 1u ||
           getState(vec2( 0.0,  1.0)) == 1u ||
           getState(vec2( 1.0,  1.0)) == 1u ||
-          u_random < 0.00001
+          randVal < 0.00001
         ) {
           outState = 1u; // BURNING
         } else {
@@ -264,14 +271,14 @@ function buildSimulationProgram(gl: WebGL2RenderingContext) {
       } else if (state == 1u) { // BURNING
         outState = 2u; // EMPTY
       } else if (state == 2u) { // EMPTY
-        if (u_random < 0.02) {
+        if (randVal < 0.02) {
           outState = 0u; // TREE
         } else {
           outState = 2u; // EMPTY
         }
       }
 
-      // outState = state == 0u ? 1u : 2u;
+      // outState = randVal < 0.01 ? 2u : 0u; // 10% chance to be burning
     }`;
 
   return buildProgram(gl, vertexShaderSource, fragmentShaderSource);
