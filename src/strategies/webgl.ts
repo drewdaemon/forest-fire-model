@@ -1,4 +1,5 @@
 import { COLORS } from "../colors";
+import { F, P } from "../simulation";
 import { Strategy } from "../types";
 
 export class WebGlStrategy extends Strategy {
@@ -281,7 +282,7 @@ function buildSimulationProgram(gl: WebGL2RenderingContext) {
           getState(vec2(-1.0,  1.0)) == 1u ||
           getState(vec2( 0.0,  1.0)) == 1u ||
           getState(vec2( 1.0,  1.0)) == 1u ||
-          randVal < 0.00001
+          randVal < ${F}
         ) {
           outState = 1u; // BURNING
         } else {
@@ -290,7 +291,7 @@ function buildSimulationProgram(gl: WebGL2RenderingContext) {
       } else if (state == 1u) { // BURNING
         outState = 2u; // EMPTY
       } else if (state == 2u) { // EMPTY
-        if (randVal < 0.02) {
+        if (randVal < ${P}) {
           outState = 0u; // TREE
         } else {
           outState = 2u; // EMPTY

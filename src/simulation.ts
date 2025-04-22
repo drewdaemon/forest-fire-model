@@ -6,9 +6,9 @@ import { STATE } from "./states";
 // An empty space fills with a tree with probability p
 
 // Regeneration factor
-const P = 0.02;
+export const P = 0.02;
 // Probability of a lightening strike
-const F = 1e-5;
+export const F = 1e-5;
 
 export function performCycle(forest: number[][], temp: number[][]) {
   const ylen = forest.length;
