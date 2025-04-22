@@ -1,3 +1,4 @@
+import { COLORS } from "../colors";
 import { buildForest, performCycle } from "../simulation";
 import { Strategy } from "../types";
 
@@ -49,12 +50,6 @@ export class ImageDataStrategy extends Strategy {
   }
 }
 
-const COLORS_IMAGE_DATA: Record<number, number[]> = {
-  0: [46, 145, 58, 255],
-  1: [255, 43, 35, 255],
-  2: [0, 0, 0, 255],
-};
-
 function drawCanvasUsingImageData(
   updated: number[][],
   ctx: CanvasRenderingContext2D
@@ -65,7 +60,7 @@ function drawCanvasUsingImageData(
   for (let row = 0; row < updated.length; row++) {
     for (let col = 0; col < updated[0].length; col++) {
       const pixelStart = (row * imageData.width + col) * 4;
-      const color = COLORS_IMAGE_DATA[updated[row][col]];
+      const color = COLORS[updated[row][col]];
       for (let i = 0; i < color.length; i++) {
         data[pixelStart + i] = color[i];
       }

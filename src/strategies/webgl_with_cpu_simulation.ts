@@ -1,3 +1,4 @@
+import { COLORS } from "../colors";
 import { performIntCycle } from "../simulation";
 import { Strategy } from "../types";
 
@@ -151,6 +152,16 @@ function setup(gl: WebGL2RenderingContext, forest: Uint8Array) {
     console.error("WebGL Error:", error);
   }
 
+  // upload palette
+  gl.useProgram(program);
+  const paletteLoc = gl.getUniformLocation(program, "u_palette");
+  const palette = new Float32Array(
+    Object.values(COLORS)
+      .map((color) => color.map((c) => c / 255))
+      .flat()
+  );
+  gl.uniform4fv(paletteLoc, palette);
+
   return {
     texture: tex,
     program,
@@ -184,16 +195,11 @@ function buildProgram(gl: WebGL2RenderingContext) {
     out vec4 outColor;
 
     uniform usampler2D u_texture;
+    uniform vec4 u_palette[3];
 
     void main() {
      uint texValue = texture(u_texture, v_texcoord).r;
-     if (texValue == 0u) {
-       outColor = vec4(0.0, 1.0, 0.0, 1.0);
-     } else if (texValue == 1u) {
-       outColor = vec4(1.0, 0.0, 0.0, 1.0);
-     } else if (texValue == 2u) {
-        outColor = vec4(0.0, 0.0, 0.0, 1.0);
-      }
+     outColor = u_palette[texValue];
     }`;
 
   gl.shaderSource(vertShader, vertexShaderSource);
