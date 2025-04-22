@@ -30,7 +30,9 @@ function main() {
       fps = frameCount;
       frameCount = 0;
       fpsLastUpdate = now;
-      fpsContainer.innerText = `Frame rate: ${fps}/sec`;
+      fpsContainer.innerText = `Simulating ${Intl.NumberFormat().format(
+        (canvas?.height ?? 0) * (canvas?.width ?? 0)
+      )} points at ${fps} frames/sec`;
     }
 
     window.requestAnimationFrame(frame);
@@ -92,6 +94,10 @@ const addCanvas = () => {
   // Set the canvas width and height to match the actual pixel dimensions
   canvas.width = Math.floor(width * devicePixelRatio);
   canvas.height = Math.floor(height * devicePixelRatio);
+
+  console.log(
+    `Canvas size: ${canvas.width}x${canvas.height}, CSS size: ${width}x${height}`
+  );
 
   // Scale the canvas's CSS size to match the logical size
   canvas.style.width = `${width}px`;
