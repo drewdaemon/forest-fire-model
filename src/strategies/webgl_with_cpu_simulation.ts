@@ -135,6 +135,10 @@ function setup(gl: WebGL2RenderingContext, forest: Uint8Array) {
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
 
+  // By default, textures are expected to be 4-byte aligned. We need to set it to 1 byte,
+  // because we are using 1-byte textures.
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+
   gl.texImage2D(
     gl.TEXTURE_2D,
     0,
