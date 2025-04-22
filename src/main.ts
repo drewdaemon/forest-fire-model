@@ -82,10 +82,20 @@ function setupElements() {
 const addCanvas = () => {
   const canvas = document.createElement("canvas");
   document.body.appendChild(canvas);
-  const { width, height } = canvas.getBoundingClientRect();
 
-  canvas.width = width;
-  canvas.height = height;
+  const rect = canvas.getBoundingClientRect();
+  const width = Math.floor(rect.width);
+  const height = Math.floor(rect.height);
+
+  const devicePixelRatio = window.devicePixelRatio || 1;
+
+  // Set the canvas width and height to match the actual pixel dimensions
+  canvas.width = Math.floor(width * devicePixelRatio);
+  canvas.height = Math.floor(height * devicePixelRatio);
+
+  // Scale the canvas's CSS size to match the logical size
+  canvas.style.width = `${width}px`;
+  canvas.style.height = `${height}px`;
 
   return canvas;
 };
